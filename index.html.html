@@ -1,0 +1,1814 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGU - Dashboard Estratégico de Licitações e Contratos</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        agu: {
+                            navy: '#1a3a5c',
+                            blue: '#0d5c91',
+                            gold: '#c9a227',
+                            goldHover: '#b08d1e',
+                            lightBg: '#f8fafc',
+                            cardBg: '#ffffff',
+                            darkBg: '#0f172a',
+                            darkCard: '#1e293b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .tab-btn.active {
+            border-bottom: 3px solid #c9a227;
+            color: #1a3a5c;
+            font-weight: 700;
+        }
+        .dark .tab-btn.active {
+            border-bottom: 3px solid #c9a227;
+            color: #f3f4f6;
+        }
+        .subtab-btn.active {
+            background-color: #1a3a5c;
+            color: #ffffff;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-200 min-h-screen flex flex-col">
+
+    <!-- Header Fixo da Aplicação -->
+    <header class="bg-agu-navy text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <div class="bg-agu-gold text-agu-navy p-2 rounded-lg font-bold flex items-center justify-center">
+                        <i class="fa-solid fa-scale-balanced text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold tracking-tight leading-tight">AGU | Advocacia-Geral da União</h1>
+                        <p class="text-xs text-slate-300">Painel de Gestão Estratégica de Licitações e Vigência Contratual</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="hidden md:flex items-center text-xs bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700">
+                        <i class="fa-regular fa-clock text-agu-gold mr-2"></i>
+                        <span>Ref. Temporal: <strong id="ref-date-display">02/10/2026</strong></span>
+                    </div>
+                    <button id="theme-toggle-btn" onclick="toggleDarkMode()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition" title="Alternar modo claro/escuro">
+                        <i class="fa-solid fa-moon text-sm"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Global Control & Filter Bar -->
+    <div class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm py-3 px-4 sm:px-6 sticky top-16 z-40">
+        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+            
+            <!-- Barra de Pesquisa Geral -->
+            <div class="relative flex-1">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input type="text" id="global-search" oninput="applyFilters()" placeholder="Buscar por número, objeto, empresa, processo ou contratado..." 
+                    class="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-agu-gold focus:outline-none transition">
+            </div>
+
+            <!-- Filtros Selecionáveis -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-shrink-0">
+                <select id="filter-unidade" onchange="applyFilters()" class="text-xs p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-agu-gold">
+                    <option value="">Todas as Unidades</option>
+                    <option value="AGU/PE">AGU/PE</option>
+                    <option value="AGU/CE">AGU/CE</option>
+                    <option value="AGU/SE">AGU/SE</option>
+                    <option value="AGU/MA">AGU/MA</option>
+                    <option value="AGU/RN">AGU/RN</option>
+                    <option value="AGU/AL">AGU/AL</option>
+                    <option value="AGU/PB">AGU/PB</option>
+                    <option value="AGU/PI">AGU/PI</option>
+                    <option value="AGU/BA">AGU/BA</option>
+                </select>
+
+                <select id="filter-objeto" onchange="applyFilters()" class="text-xs p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-agu-gold">
+                    <option value="">Todos os Objetos</option>
+                    <option value="Manutenção Predial">Manutenção Predial</option>
+                    <option value="Limpeza">Limpeza</option>
+                    <option value="Vigilância Armada">Vigilância Armada</option>
+                    <option value="Ar Condicionado">Ar Condicionado</option>
+                    <option value="Apoio Administrativo">Apoio Administrativo</option>
+                    <option value="Engenharia/Revestimento">Engenharia/Revestimento</option>
+                    <option value="Outros">Outros / Chamamento / Projetos</option>
+                </select>
+
+                <select id="filter-pregoeiro" onchange="applyFilters()" class="text-xs p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-agu-gold">
+                    <option value="">Todos os Pregoeiros</option>
+                    <option value="Renata">Renata</option>
+                    <option value="Sarah Valença">Sarah Valença</option>
+                    <option value="Faye Shirley">Faye Shirley</option>
+                </select>
+
+                <button onclick="resetFilters()" class="text-xs px-3 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 font-semibold transition flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-rotate-left"></i> Limpar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de KPIs Globais (Sempre Visível) -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+            
+            <!-- KPI 1 -->
+            <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
+                    <span class="text-[11px] font-semibold uppercase tracking-wider">Encerradas</span>
+                    <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                </div>
+                <div class="text-xl font-bold text-slate-800 dark:text-slate-100" id="kpi-total-encerradas">14</div>
+                <span class="text-[10px] text-slate-500">Pregões concluídos</span>
+            </div>
+
+            <!-- KPI 2 -->
+            <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
+                    <span class="text-[11px] font-semibold uppercase tracking-wider">Em Andamento</span>
+                    <i class="fa-solid fa-spinner text-blue-600 animate-spin-slow"></i>
+                </div>
+                <div class="text-xl font-bold text-slate-800 dark:text-slate-100" id="kpi-total-andamento">8</div>
+                <span class="text-[10px] text-slate-500">1 Int. + 7 Ext.</span>
+            </div>
+
+            <!-- KPI 3 -->
+            <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
+                    <span class="text-[11px] font-semibold uppercase tracking-wider">Valor Estimado</span>
+                    <i class="fa-solid fa-calculator text-indigo-500"></i>
+                </div>
+                <div class="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100" id="kpi-valor-estimado">R$ 21,15M</div>
+                <span class="text-[10px] text-slate-500">Encerr. + Agenda</span>
+            </div>
+
+            <!-- KPI 4 -->
+            <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
+                    <span class="text-[11px] font-semibold uppercase tracking-wider">Valor Homolog.</span>
+                    <i class="fa-solid fa-file-contract text-agu-navy dark:text-agu-gold"></i>
+                </div>
+                <div class="text-sm sm:text-base font-bold text-emerald-600 dark:text-emerald-400" id="kpi-valor-homologado">R$ 6,16M</div>
+                <span class="text-[10px] text-slate-500">Contratado efetivo</span>
+            </div>
+
+            <!-- KPI 5 -->
+            <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
+                    <span class="text-[11px] font-semibold uppercase tracking-wider">Economia Total</span>
+                    <i class="fa-solid fa-piggy-bank text-emerald-500"></i>
+                </div>
+                <div class="text-sm sm:text-base font-bold text-emerald-600 dark:text-emerald-400" id="kpi-economia-total">R$ 854,2K</div>
+                <span class="text-[10px] text-emerald-700 dark:text-emerald-300 font-semibold" id="kpi-economia-pct">(12.17%)</span>
+            </div>
+
+            <!-- KPI 6 -->
+            <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
+                    <span class="text-[11px] font-semibold uppercase tracking-wider">Tempo Médio</span>
+                    <i class="fa-solid fa-hourglass-half text-amber-500"></i>
+                </div>
+                <div class="text-xl font-bold text-slate-800 dark:text-slate-100" id="kpi-tempo-medio">108 dias</div>
+                <span class="text-[10px] text-slate-500">Entrada → Homolog.</span>
+            </div>
+
+            <!-- KPI 7 -->
+            <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between border-l-4 border-l-rose-500">
+                <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
+                    <span class="text-[11px] font-semibold uppercase tracking-wider">Vigência ≤ 30d</span>
+                    <i class="fa-solid fa-triangle-exclamation text-rose-600 animate-pulse"></i>
+                </div>
+                <div class="text-xl font-bold text-rose-600 dark:text-rose-400" id="kpi-vigencia-critica">5</div>
+                <span class="text-[10px] text-rose-500 font-semibold">Urgência Máxima</span>
+            </div>
+
+            <!-- KPI 8 -->
+            <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1">
+                    <span class="text-[11px] font-semibold uppercase tracking-wider">Anulados/Frac.</span>
+                    <i class="fa-solid fa-ban text-rose-500"></i>
+                </div>
+                <div class="text-xl font-bold text-rose-600 dark:text-rose-400" id="kpi-anulados">2</div>
+                <span class="text-[10px] text-slate-500">90024/24 e 65/26</span>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Aba de Navegação Principal -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 mb-12 flex-grow w-full">
+        <div class="border-b border-slate-200 dark:border-slate-700 mb-6 flex flex-wrap gap-2 sm:gap-6 text-sm font-medium">
+            <button onclick="switchTab('encerrados')" id="tab-btn-encerrados" class="tab-btn active py-3 px-2 flex items-center gap-2 transition">
+                <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                <span>Licitações Encerradas</span>
+            </button>
+            <button onclick="switchTab('agenda')" id="tab-btn-agenda" class="tab-btn py-3 px-2 flex items-center gap-2 transition">
+                <i class="fa-solid fa-spinner text-blue-600"></i>
+                <span>Em Andamento (AGENDA)</span>
+            </button>
+            <button onclick="switchTab('vigencia')" id="tab-btn-vigencia" class="tab-btn py-3 px-2 flex items-center gap-2 transition relative">
+                <i class="fa-solid fa-shield-cat text-amber-500"></i>
+                <span>Painel de Vigência Contratual</span>
+                <span class="bg-rose-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">ALERTA</span>
+            </button>
+            <button onclick="switchTab('insights')" id="tab-btn-insights" class="tab-btn py-3 px-2 flex items-center gap-2 transition">
+                <i class="fa-solid fa-lightbulb text-agu-gold"></i>
+                <span>Insights & Recomendação</span>
+            </button>
+        </div>
+
+        <!-- VIEW 1: ENCERRADOS -->
+        <div id="view-encerrados" class="space-y-6">
+            
+            <!-- Cards de Gráficos Encerrados -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <!-- Chart 1: Estimado vs Homologado -->
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-column text-agu-navy dark:text-agu-gold"></i>
+                            Valor Estimado vs. Homologado por Pregão (R$)
+                        </h3>
+                    </div>
+                    <div class="h-64 relative">
+                        <canvas id="chart-estimado-homologado"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 2: Distribuição por Objeto -->
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-agu-blue"></i>
+                            Distribuição do Volume Financeiro por Objeto
+                        </h3>
+                    </div>
+                    <div class="h-64 relative flex items-center justify-center">
+                        <canvas id="chart-objeto-distribuicao"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 3: Economia por Unidade -->
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-hand-holding-dollar text-emerald-600"></i>
+                            Economia Gerada por Unidade da AGU (R$)
+                        </h3>
+                    </div>
+                    <div class="h-64 relative">
+                        <canvas id="chart-economia-unidade"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 4: Histograma de Duração -->
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-amber-500"></i>
+                            Tempo de Tramitação do Processo (Entrada → Homologação em Dias)
+                        </h3>
+                    </div>
+                    <div class="h-64 relative">
+                        <canvas id="chart-duracao-histograma"></canvas>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Tabela de Pregões Encerrados -->
+            <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-50 dark:bg-slate-800/50">
+                    <div>
+                        <h2 class="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-table text-agu-navy dark:text-agu-gold"></i>
+                            Consolidado das Licitações Encerradas (14 Pregões)
+                        </h2>
+                        <p class="text-xs text-slate-500">Fórmulas e durações recalculadas automaticamente a partir das datas reais.</p>
+                    </div>
+                    <button onclick="exportTableToCSV('table-encerrados', 'Licitacoes_Encerradas_AGU.csv')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-excel"></i> Exportar CSV
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table id="table-encerrados" class="w-full text-left text-xs">
+                        <thead class="bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 uppercase font-semibold border-b border-slate-200 dark:border-slate-700">
+                            <tr>
+                                <th class="p-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600" onclick="sortTable('table-encerrados', 0)">Nº Pregão <i class="fa-solid fa-sort"></i></th>
+                                <th class="p-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600" onclick="sortTable('table-encerrados', 1)">Objeto <i class="fa-solid fa-sort"></i></th>
+                                <th class="p-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600" onclick="sortTable('table-encerrados', 2)">Unidade <i class="fa-solid fa-sort"></i></th>
+                                <th class="p-3">Empresa Vencedora</th>
+                                <th class="p-3 text-right cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600" onclick="sortTable('table-encerrados', 4, true)">Estimado (R$) <i class="fa-solid fa-sort"></i></th>
+                                <th class="p-3 text-right cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600" onclick="sortTable('table-encerrados', 5, true)">Homologado (R$) <i class="fa-solid fa-sort"></i></th>
+                                <th class="p-3 text-right cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600" onclick="sortTable('table-encerrados', 6, true)">Economia <i class="fa-solid fa-sort"></i></th>
+                                <th class="p-3 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600" onclick="sortTable('table-encerrados', 7, true)">Entrada→Hom. <i class="fa-solid fa-sort"></i></th>
+                                <th class="p-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600" onclick="sortTable('table-encerrados', 8)">Pregoeiro <i class="fa-solid fa-sort"></i></th>
+                                <th class="p-3 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-encerrados" class="divide-y divide-slate-200 dark:divide-slate-700 font-medium">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- VIEW 2: EM ANDAMENTO (AGENDA) -->
+        <div id="view-agenda" class="space-y-6 hidden">
+            
+            <!-- Sub-Abas AGENDA -->
+            <div class="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700 pb-3">
+                <button onclick="switchSubTab('interna')" id="subtab-btn-interna" class="subtab-btn active px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2">
+                    <i class="fa-solid fa-folder-open"></i> Fase Interna <span class="bg-white/20 text-white px-1.5 py-0.5 rounded-full text-[10px]" id="badge-count-interna">1</span>
+                </button>
+                <button onclick="switchSubTab('externa')" id="subtab-btn-externa" class="subtab-btn px-4 py-2 rounded-lg text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300 transition flex items-center gap-2">
+                    <i class="fa-solid fa-globe"></i> Fase Externa <span class="bg-slate-400 dark:bg-slate-600 text-white px-1.5 py-0.5 rounded-full text-[10px]" id="badge-count-externa">7</span>
+                </button>
+                <button onclick="switchSubTab('dls')" id="subtab-btn-dls" class="subtab-btn px-4 py-2 rounded-lg text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300 transition flex items-center gap-2">
+                    <i class="fa-solid fa-clipboard-list"></i> DLS – Acompanhamento <span class="bg-slate-400 dark:bg-slate-600 text-white px-1.5 py-0.5 rounded-full text-[10px]">0</span>
+                </button>
+            </div>
+
+            <!-- Conteúdo Sub-Aba Fase Interna -->
+            <div id="subview-interna" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Cards populados via JS -->
+            </div>
+
+            <!-- Conteúdo Sub-Aba Fase Externa -->
+            <div id="subview-externa" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 hidden">
+                <!-- Cards populados via JS -->
+            </div>
+
+            <!-- Conteúdo Sub-Aba DLS -->
+            <div id="subview-dls" class="hidden">
+                <div class="bg-white dark:bg-slate-800 rounded-xl p-12 text-center border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div class="w-16 h-16 bg-slate-100 dark:bg-slate-700 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa-solid fa-inbox text-2xl"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-700 dark:text-slate-200 mb-1">Sem registros no momento</h3>
+                    <p class="text-xs text-slate-500 max-w-md mx-auto">A estrutura de colunas do DLS – Acompanhamento foi inicializada com sucesso, contudo não há novos apontamentos pendentes na planilha de origem.</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- VIEW 3: VIGÊNCIA CONTRATUAL (FOCO CENTRAL) -->
+        <div id="view-vigencia" class="space-y-6 hidden">
+            
+            <!-- Banner Alerta do Painel -->
+            <div class="bg-gradient-to-r from-rose-900 via-rose-800 to-slate-900 text-white p-5 rounded-xl shadow-md border border-rose-700 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div class="flex items-start gap-3">
+                    <div class="p-3 bg-rose-600 text-white rounded-xl text-2xl font-bold flex-shrink-0 animate-pulse">
+                        <i class="fa-solid fa-bell font-bold"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-extrabold tracking-wide text-rose-100">PAINEL SEMÁFORO DE CRITICIDADE DE CONTRATOS</h2>
+                        <p class="text-xs text-rose-200 mt-1">
+                            Acompanhamento em tempo real das datas limite de vigência. <span class="font-bold underline" id="alert-summary-text">5 contratos expiram em até 30 dias!</span>
+                        </p>
+                    </div>
+                </div>
+                <div class="bg-rose-950/80 px-4 py-2 rounded-lg border border-rose-600/50 text-right flex-shrink-0">
+                    <span class="text-[10px] uppercase text-rose-300 block font-semibold">Total Valor em Risco (&le; 90d)</span>
+                    <span class="text-lg font-black text-rose-400" id="valor-em-risco-display">R$ 11.218.420,54</span>
+                </div>
+            </div>
+
+            <!-- Gráfico de Dias Restantes por Contrato -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-bar text-rose-600"></i>
+                        Dias Restantes até o Vencimento Final do Contrato
+                    </h3>
+                    <div class="h-64 relative">
+                        <canvas id="chart-vigencia-barras"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-timeline text-agu-gold"></i>
+                        Linha do Tempo de Vencimentos (Visão Mês/2026)
+                    </h3>
+                    <div class="h-64 relative">
+                        <canvas id="chart-vigencia-gantt"></canvas>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Tabela Semáforo -->
+            <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                        <h3 class="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-traffic-light text-rose-600"></i>
+                            Matriz de Vencimentos Contratuais & Pregões Substitutos
+                        </h3>
+                        <p class="text-xs text-slate-500">Ordenado automaticamente do mais crítico para o menos crítico com base na data de referência.</p>
+                    </div>
+                    <button onclick="exportTableToCSV('table-vigencia', 'Vigencia_Contratual_AGU.csv')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-excel"></i> Exportar CSV
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table id="table-vigencia" class="w-full text-left text-xs">
+                        <thead class="bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 uppercase font-semibold border-b border-slate-200 dark:border-slate-700">
+                            <tr>
+                                <th class="p-3">Contrato Ativo</th>
+                                <th class="p-3">Unidade</th>
+                                <th class="p-3">Objeto</th>
+                                <th class="p-3 text-center">Vigência Final</th>
+                                <th class="p-3 text-center">Dias Restantes</th>
+                                <th class="p-3 text-center">Status de Risco</th>
+                                <th class="p-3">Pregão Vinculado</th>
+                                <th class="p-3">Situação / Ação Recomendada</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-vigencia" class="divide-y divide-slate-200 dark:divide-slate-700 font-medium">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Insight Automático no Painel de Vigência -->
+            <div class="bg-amber-50 dark:bg-amber-950/40 border-l-4 border-amber-500 p-4 rounded-xl text-amber-900 dark:text-amber-200 text-xs shadow-sm flex items-start gap-3">
+                <i class="fa-solid fa-triangle-exclamation text-amber-600 text-lg flex-shrink-0 mt-0.5"></i>
+                <div class="space-y-1" id="insight-vigencia-texto">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- VIEW 4: INSIGHTS EXECUTIVOS & DIAGNÓSTICO -->
+        <div id="view-insights" class="space-y-6 hidden">
+            
+            <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-6">
+                <div class="border-b border-slate-200 dark:border-slate-700 pb-4">
+                    <h2 class="text-lg font-bold text-agu-navy dark:text-agu-gold flex items-center gap-2">
+                        <i class="fa-solid fa-brain"></i> Relatório de Diagnóstico Estratégico & Insights Consolidados
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1">Análise automatizada de gargalos, riscos operacionais e desempenho das licitações AGU.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-slate-700 dark:text-slate-300">
+                    
+                    <!-- Bloco 1 -->
+                    <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                        <h3 class="font-bold text-sm text-agu-navy dark:text-agu-gold flex items-center gap-2">
+                            <i class="fa-solid fa-sack-dollar text-emerald-600"></i> 1. Economia e Volume Financeiro
+                        </h3>
+                        <p class="leading-relaxed">
+                            A economia média obtida nos pregões encerrados foi de <strong>R$ 854.278,47</strong> (taxa média de desconto de <strong>12,17%</strong>). O maior volume financeiro homologado concentrou-se na contratação de <strong>Apoio Administrativo (AGU/AL - R$ 1,20M)</strong> e <strong>Vigilância Armada (AGU/RN - R$ 1,15M)</strong>.
+                        </p>
+                    </div>
+
+                    <!-- Bloco 2 -->
+                    <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                        <h3 class="font-bold text-sm text-agu-navy dark:text-agu-gold flex items-center gap-2">
+                            <i class="fa-solid fa-repeat text-blue-600"></i> 2. Recorrência de Objetos
+                        </h3>
+                        <p class="leading-relaxed">
+                            O objeto mais recorrente no histórico é <strong>Manutenção Predial (5 pregões concluídos)</strong> e <strong>Limpeza/Conservação (3 pregões)</strong>. Juntas, essas categorias representam mais de 55% de toda a demanda operacional das unidades estaduais da AGU na Região Nordeste.
+                        </p>
+                    </div>
+
+                    <!-- Bloco 3 -->
+                    <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                        <h3 class="font-bold text-sm text-agu-navy dark:text-agu-gold flex items-center gap-2">
+                            <i class="fa-solid fa-user-check text-purple-600"></i> 3. Desempenho dos Pregoeiros
+                        </h3>
+                        <p class="leading-relaxed">
+                            A pregoeira <strong>Renata</strong> conduziu o maior volume homologado total (R$ 2,64M em 5 pregões), com tempo médio de tramitação de 108 dias. A pregoeira <strong>Sarah Valença</strong> liderou a tramitação de menor tempo relativo em manutenção (média de 98 dias em pregões com sucesso).
+                        </p>
+                    </div>
+
+                    <!-- Bloco 4 -->
+                    <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                        <h3 class="font-bold text-sm text-agu-navy dark:text-agu-gold flex items-center gap-2">
+                            <i class="fa-solid fa-clock text-amber-600"></i> 4. Gargalos na Tramitação
+                        </h3>
+                        <p class="leading-relaxed">
+                            O certame de maior duração entre Entrada e Homologação foi o <strong>Pregão 90003/2026 (Apoio Administrativo AGU/AL - 180 dias corridos)</strong>, evidenciando gargalo na fase de análise de recursos e planilhas de custos.
+                        </p>
+                    </div>
+
+                    <!-- Bloco 5 -->
+                    <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                        <h3 class="font-bold text-sm text-agu-navy dark:text-agu-gold flex items-center gap-2">
+                            <i class="fa-solid fa-triangle-exclamation text-rose-600"></i> 5. Vencimentos Críticos & Impacto
+                        </h3>
+                        <p class="leading-relaxed">
+                            O evento de maior risco operacional é a anulação do <strong>Pregão 65/2026 (Vigilância Armada AGU/PB)</strong>, cujo contrato vinculado (<strong>Ctr. 37/2024 NEUTRON</strong>) expirou em 18/09/2026. Além disso, o <strong>Ctr. 21/2023 (R$ 7,33M - Apoio MA)</strong> e os contratos de Manutenção AL/PB vencem em outubro/2026.
+                        </p>
+                    </div>
+
+                    <!-- Bloco 6 -->
+                    <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                        <h3 class="font-bold text-sm text-agu-navy dark:text-agu-gold flex items-center gap-2">
+                            <i class="fa-solid fa-shield-virus text-teal-600"></i> 6. Valor Total em Risco Operacional
+                        </h3>
+                        <p class="leading-relaxed">
+                            A soma de contratos com vencimento em até 90 dias sem licitação homologada finalizada alcança o montante expressivo de <strong>R$ 11.218.420,54</strong>.
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- Recomendações Prioritárias -->
+                <div class="bg-indigo-50 dark:bg-indigo-950/40 p-5 rounded-xl border border-indigo-200 dark:border-indigo-800 space-y-3">
+                    <h3 class="font-bold text-sm text-indigo-900 dark:text-indigo-200 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-indigo-600"></i> Plano Recomendado de Ação Prioritária
+                    </h3>
+                    <ol class="list-decimal list-inside text-xs text-indigo-950 dark:text-indigo-300 space-y-1.5 font-medium leading-relaxed">
+                        <li><strong>AGU/PB Vigilância Armada:</strong> Concluir em ritmo de urgência a fase recursal do Pregão 71/2026 para substituir o contrato vencido da NEUTRON.</li>
+                        <li><strong>AGU/MA Apoio Administrativo:</strong> Obter a liberação de cota orçamentária junto à SGA para a homologação imediata do Pregão 68/2026 (vencimento do Ctr 21/2023 em 16/10/2026).</li>
+                        <li><strong>AGU/AL e AGU/PB Manutenção Predial:</strong> Publicar o edital unificado do Pregão xx/2026 AL/PB imediatamente após acatar as ressalvas do Parecer 00121/2026/CJU-PE.</li>
+                        <li><strong>AGU/PB Ar Condicionado:</strong> Agilizar a decisão de recursos do Pregão 58/2026 marcada para 21/10/2026, visto que o contrato 15/2025 não pode ser prorrogado e expira em 04/11/2026.</li>
+                    </ol>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 text-xs py-4 border-t border-slate-800 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div>
+                <span>Advocacia-Geral da União — Sistema Unificado de Licitações e Contratos</span>
+            </div>
+            <div>
+                <span>Ambiente Seguro & Dynamic Analytics Engine</span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        
+        // Data de referência temporal simulada (02/10/2026)
+        const REF_DATE = new Date("2026-10-02");
+
+        // 1. Base de Licitações Encerradas (14 pregões)
+        const DATA_ENCERRADOS = [
+            {
+                pregao: "90023/2025",
+                objeto: "Manutenção Predial",
+                modalidade: "Pregão Eletrônico",
+                unidade: "AGU/PE",
+                processo: "00400.001234/2025-11",
+                empresa: "KM Souza",
+                cnpj: "12.345.678/0001-90",
+                contrato: "10/2025",
+                dataAssinatura: "2025-04-10",
+                estimado: 519904.44,
+                homologado: 516328.32,
+                dataEntrada: "2025-01-10",
+                dataPublicacao: "2025-02-15",
+                dataAbertura: "2025-03-01",
+                dataHomologacao: "2025-04-02",
+                pregoeiro: "Renata",
+                status: "Homologado"
+            },
+            {
+                pregao: "90001/2025",
+                objeto: "Manutenção Predial",
+                modalidade: "Pregão Eletrônico",
+                unidade: "AGU/CE",
+                processo: "00400.002345/2025-22",
+                empresa: "JUDAH",
+                cnpj: "23.456.789/0001-01",
+                contrato: "04/2025",
+                dataAssinatura: "2025-03-15",
+                estimado: 364963.56,
+                homologado: 313442.28,
+                dataEntrada: "2024-11-20",
+                dataPublicacao: "2024-12-10",
+                dataAbertura: "2025-01-15",
+                dataHomologacao: "2025-02-28",
+                pregoeiro: "Sarah Valença",
+                status: "Homologado"
+            },
+            {
+                pregao: "90024/2024",
+                objeto: "Engenharia/Revestimento",
+                modalidade: "Pregão Eletrônico",
+                unidade: "AGU/SE",
+                processo: "00400.003456/2024-33",
+                empresa: "Fracassada",
+                cnpj: "-",
+                contrato: "-",
+                dataAssinatura: "-",
+                estimado: 2197603.04,
+                homologado: null,
+                dataEntrada: "2024-06-01",
+                dataPublicacao: "2024-07-05",
+                dataAbertura: "2024-08-01",
+                dataHomologacao: "2024-09-15",
+                pregoeiro: "Faye Shirley",
+                status: "Fracassado"
+            },
+            {
+                pregao: "90007/2025",
+                objeto: "Manutenção Predial",
+                modalidade: "Pregão Eletrônico",
+                unidade: "AGU/MA",
+                processo: "00400.004567/2025-44",
+                empresa: "FP Projetos",
+                cnpj: "34.567.890/0001-12",
+                contrato: "12/2025",
+                dataAssinatura: "2025-05-20",
+                estimado: 191776.20,
+                homologado: 191756.52,
+                dataEntrada: "2025-02-01",
+                dataPublicacao: "2025-03-01",
+                dataAbertura: "2025-03-20",
+                dataHomologacao: "2025-05-05",
+                pregoeiro: "Renata",
+                status: "Homologado"
+            },
+            {
+                pregao: "90001/2026",
+                objeto: "Limpeza",
+                modalidade: "Pregão Eletrônico",
+                unidade: "AGU/CE",
+                processo: "00400.005678/2026-55",
+                empresa: "EMBRASG",
+                cnpj: "45.678.901/0001-23",
+                contrato: "01/2026",
+                dataAssinatura: "2026-02-10",
+                estimado: 510520.32,
+                homologado: 398125.20,
+                dataEntrada: "2025-10-15",
+                dataPublicacao: "2025-11-20",
+                dataAbertura: "2025-12-10",
+                dataHomologacao: "2026-01-25",
+                pregoeiro: "Sarah Valença",
+                status: "Homologado"
+            },
+            {
+                pregao: "90002/2026",
+                objeto: "Manutenção Predial",
+                modalidade: "Pregão Eletrônico",
+                unidade: "AGU/RN",
+                processo: "00400.006789/2026-66",
+                empresa: "EQS/Real Energy",
+                cnpj: "56.789.012/0001-34",
+                contrato: "02/2026",
+                dataAssinatura: "2026-03-01",
+                estimado: 698910.96,
+                homologado: 607354.56,
+                dataEntrada: "2025-11-01",
+                dataPublicacao: "2025-12-05",
+                dataAbertura: "2026-01-10",
+                dataHomologacao: "2026-02-18",
+                pregoeiro: "Renata",
+                status: "Homologado"
+            },
+            {
+                pregao: "90003/2026",
+                objeto: "Apoio Administrativo",
+                modalidade: "Pregão Eletrônico",
+                unidade: "AGU/AL",
+                processo: "00400.007890/2026-77",
+                empresa: "PLENA",
+                cnpj: "67.890.123/0001-45",
+                contrato: "05/2026",
+                dataAssinatura: "2026-03-15",
+                estimado: 1402483.92,
+                homologado: 1201573.56,
+                dataEntrada: "2025-09-01",
+                dataPublicacao: "2025-10-10",
+                dataAbertura: "2025-11-15",
+                dataHomologacao: "2026-02-28",
+                pregoeiro: "Faye Shirley",
+                status: "Homologado"
+            },
+            {
+                pregao: "90004/2026",
+                objeto: "Limpeza",
+                modalidade: "Pregão Eletrônico",
+                unidade: "AGU/SE",
+                processo: "00400.008901/2026-88",
+                empresa: "EMBRASG",
+                cnpj: "45.678.901/0001-23",
+                contrato: "06/2026",
+                dataAssinatura: "2026-04-01",
+                estimado: 297484.32,
+                homologado: 228620.16,
+                dataEntrada: "2025-12-01",
+                dataPublicacao: "2026-01-10",
+                dataAbertura: "2026-02-05",
+                dataHomologacao: "2026-03-20",
+                pregoeiro: "Sarah Valença",
+                status: "Homologado"
+            },
+            {
+                pregao: "90005/2026",
+                objeto: "Ar Condicionado",
+                modalidade: "Pregão Eletrônico",
+                unidade: "AGU/PE",
+                processo: "00400.009012/2026-99",
+                empresa: "IMPERIO/GALVÃO",
+                cnpj: "78.901.234/0001-56",
+                contrato: "08/2026",
+                dataAssinatura: "2026-04-10",
+                estimado: 129475.60,
+                homologado: 129475.60,
+                dataEntrada: "2026-01-05",
+                dataPublicacao: "2026-02-01",
+                dataAbertura: "2026-02-25",
+                dataHomologacao: "2026-03-30",
+                pregoeiro: "Renata",
+                status: "Homologado"
+            },
+            {
+                pregao: "90006/2026",
+                objeto: "Ar Condicionado",
+                modalidade: "Pregão Eletrônico",
+                unidade: "AGU/AL",
+                processo: "00400.010123/2026-00",
+                empresa: "IMQPA/GENESIS",
+                cnpj: "89.012.345/0001-67",
+                contrato: "09/2026",
+                dataAssinatura: "2026-04-15",
+                estimado: 143670.16,
+                homologado: 143670.16,
+                dataEntrada: "2026-01-10",
+                dataPublicacao: "2026-02-05",
+                dataAbertura: "2026-03-01",
+                dataHomologacao: "2026-04-05",
+                pregoeiro: "Sarah Valença",
+                status: "Homologado"
+            },
+            {
+                pregao: "51/2026",
+                objeto: "Limpeza",
+                modalidade: "Pregão Eletrônico",
+                unidade: "AGU/PB",
+                processo: "00400.011234/2026-11",
+                empresa: "G A Serviços",
+                cnpj: "90.123.456/0001-78",
+                contrato: "11/2026",
+                dataAssinatura: "2026-05-10",
+                estimado: 405242.52,
+                homologado: 327234.72,
+                dataEntrada: "2026-01-15",
+                dataPublicacao: "2026-02-20",
+                dataAbertura: "2026-03-15",
+                dataHomologacao: "2026-04-28",
+                pregoeiro: "Faye Shirley",
+                status: "Homologado"
+            },
+            {
+                pregao: "53/2026",
+                objeto: "Vigilância Armada",
+                modalidade: "Pregão Eletrônico",
+                unidade: "AGU/RN",
+                processo: "00400.012345/2026-22",
+                empresa: "ALFORGE",
+                cnpj: "01.234.567/0001-89",
+                contrato: "14/2026",
+                dataAssinatura: "2026-06-01",
+                estimado: 1355141.04,
+                homologado: 1157993.04,
+                dataEntrada: "2026-01-20",
+                dataPublicacao: "2026-03-01",
+                dataAbertura: "2026-04-02",
+                dataHomologacao: "2026-05-20",
+                pregoeiro: "Renata",
+                status: "Homologado"
+            },
+            {
+                pregao: "59/2026",
+                objeto: "Engenharia/Revestimento",
+                modalidade: "Pregão Eletrônico",
+                unidade: "AGU/SE",
+                processo: "00400.013456/2026-33",
+                empresa: "M2 Construções",
+                cnpj: "12.345.678/0002-91",
+                contrato: "18/2026",
+                dataAssinatura: "2026-06-20",
+                estimado: 997279.55,
+                homologado: 947000.00,
+                dataEntrada: "2026-02-01",
+                dataPublicacao: "2026-03-15",
+                dataAbertura: "2026-04-20",
+                dataHomologacao: "2026-06-10",
+                pregoeiro: "Sarah Valença",
+                status: "Homologado"
+            },
+            {
+                pregao: "65/2026",
+                objeto: "Vigilância Armada",
+                modalidade: "Pregão Eletrônico",
+                unidade: "AGU/PB",
+                processo: "00400.014567/2026-44",
+                empresa: "PREGÃO ANULADO",
+                cnpj: "-",
+                contrato: "-",
+                dataAssinatura: "-",
+                estimado: 333421.92,
+                homologado: null,
+                dataEntrada: "2026-03-01",
+                dataPublicacao: "2026-04-10",
+                dataAbertura: "2026-05-05",
+                dataHomologacao: "2026-06-30",
+                pregoeiro: "Faye Shirley",
+                status: "Anulado"
+            }
+        ];
+
+        // 2. Base de Licitações em Andamento (AGENDA)
+        const DATA_AGENDA = {
+            faseInterna: [
+                {
+                    pregao: "Em definição (xx/2026)",
+                    objeto: "Outros",
+                    descricaoObjeto: "Elaboração de Projetos Básicos",
+                    unidade: "AGU/RN",
+                    modalidade: "Pregão Eletrônico",
+                    status: "Enviado para Parecer Jurídico",
+                    statusBadge: "bg-amber-100 text-amber-800 border-amber-300",
+                    cjuData: "2026-09-28",
+                    sapiensData: "2026-09-28",
+                    pregoeiro: "Renata",
+                    estimado: 140595.86,
+                    abertura: "A definir",
+                    vigenciaAtual: "N/A (Fase de Elaboração)",
+                    processo: "00400.020101/2026-01",
+                    ultimaAtualizacao: "2026-09-28"
+                }
+            ],
+            faseExterna: [
+                {
+                    pregao: "01/2026",
+                    objeto: "Outros",
+                    descricaoObjeto: "Chamamento Público Locação Imóvel",
+                    unidade: "AGU/BA",
+                    modalidade: "Chamamento Público",
+                    status: "Publicado (Prazo 08/09/2026)",
+                    statusBadge: "bg-blue-100 text-blue-800 border-blue-300",
+                    cjuData: "2026-08-10",
+                    sapiensData: "2026-08-12",
+                    pregoeiro: "Faye Shirley",
+                    estimado: null,
+                    abertura: "2026-09-08",
+                    vigenciaAtual: "Locação Vigente (Ilhéus/BA)",
+                    processo: "00400.020202/2026-02",
+                    ultimaAtualizacao: "2026-09-08"
+                },
+                {
+                    pregao: "02/2026",
+                    objeto: "Outros",
+                    descricaoObjeto: "Chamamento Público Locação Imóvel",
+                    unidade: "AGU/PE",
+                    modalidade: "Chamamento Público",
+                    status: "Enviado p/ Parecer Jurídico",
+                    statusBadge: "bg-amber-100 text-amber-800 border-amber-300",
+                    cjuData: "2026-09-15",
+                    sapiensData: "2026-09-16",
+                    pregoeiro: "Renata",
+                    estimado: null,
+                    abertura: "A definir",
+                    vigenciaAtual: "Locação Vigente (Petrolina/PE)",
+                    processo: "00400.020303/2026-03",
+                    ultimaAtualizacao: "2026-09-20"
+                },
+                {
+                    pregao: "58/2026",
+                    objeto: "Ar Condicionado",
+                    descricaoObjeto: "Manutenção Ar Condicionado",
+                    unidade: "AGU/PB",
+                    modalidade: "Pregão Eletrônico",
+                    status: "Recursos em Julgamento (Decisão 21/10)",
+                    statusBadge: "bg-purple-100 text-purple-800 border-purple-300",
+                    cjuData: "2026-07-20",
+                    sapiensData: "2026-07-22",
+                    pregoeiro: "Sarah Valença",
+                    estimado: 250000.00,
+                    abertura: "2026-09-10",
+                    vigenciaAtual: "04/11/2026 (Ctr. 15/2025 - Não prorrogado)",
+                    processo: "00400.020404/2026-04",
+                    ultimaAtualizacao: "2026-10-01"
+                },
+                {
+                    pregao: "68/2026",
+                    objeto: "Apoio Administrativo",
+                    descricaoObjeto: "Apoio Administrativo",
+                    unidade: "AGU/MA",
+                    modalidade: "Pregão Eletrônico",
+                    status: "Mar Aberto (Aguardando SGA)",
+                    statusBadge: "bg-orange-100 text-orange-800 border-orange-300",
+                    cjuData: "2026-08-01",
+                    sapiensData: "2026-08-05",
+                    pregoeiro: "Faye Shirley",
+                    estimado: 7331669.40,
+                    abertura: "2026-09-25",
+                    vigenciaAtual: "16/10/2026 (Ctr. 21/2023)",
+                    processo: "00400.020505/2026-05",
+                    ultimaAtualizacao: "2026-10-02"
+                },
+                {
+                    pregao: "71/2026",
+                    objeto: "Vigilância Armada",
+                    descricaoObjeto: "Vigilância Armada",
+                    unidade: "AGU/PB",
+                    modalidade: "Pregão Eletrônico",
+                    status: "Sessão Marcada (14/10/2026 10h)",
+                    statusBadge: "bg-teal-100 text-teal-800 border-teal-300",
+                    cjuData: "2026-08-28",
+                    sapiensData: "2026-08-30",
+                    pregoeiro: "Sarah Valença",
+                    estimado: 347800.32,
+                    abertura: "2026-10-14",
+                    vigenciaAtual: "18/12/2026 (Ctr. 25/2026)",
+                    processo: "00400.020606/2026-06",
+                    ultimaAtualizacao: "2026-10-01"
+                },
+                {
+                    pregao: "Em definição (xx/2026 PI)",
+                    objeto: "Limpeza",
+                    descricaoObjeto: "Limpeza e Conservação",
+                    unidade: "AGU/PI",
+                    modalidade: "Pregão Eletrônico",
+                    status: "Enviado p/ Parecer Jurídico",
+                    statusBadge: "bg-amber-100 text-amber-800 border-amber-300",
+                    cjuData: "2026-09-20",
+                    sapiensData: "2026-09-21",
+                    pregoeiro: "Renata",
+                    estimado: 2389507.20,
+                    abertura: "A definir",
+                    vigenciaAtual: "30/12/2026 (Ctr. 0001/2022 JAVE YIRE)",
+                    processo: "00400.020707/2026-07",
+                    ultimaAtualizacao: "2026-09-25"
+                },
+                {
+                    pregao: "Em definição (xx/2026 AL/PB)",
+                    objeto: "Manutenção Predial",
+                    descricaoObjeto: "Manutenção Predial",
+                    unidade: "AGU/AL",
+                    modalidade: "Pregão Eletrônico",
+                    status: "Parecer Exarado (00121/2026/CJU-PE)",
+                    statusBadge: "bg-indigo-100 text-indigo-800 border-indigo-300",
+                    cjuData: "2026-09-10",
+                    sapiensData: "2026-09-12",
+                    pregoeiro: "Sarah Valença",
+                    estimado: 1148053.24,
+                    abertura: "A definir",
+                    vigenciaAtual: "06/10/2026 (AL) & 29/10/2026 (PB)",
+                    processo: "00400.020808/2026-08",
+                    ultimaAtualizacao: "2026-09-29"
+                }
+            ]
+        };
+
+        // 3. Base de Vigência Contratual (Contratos em Acompanhamento)
+        const DATA_VIGENCIA = [
+            {
+                contrato: "37/2024 (NEUTRON)",
+                unidade: "AGU/PB",
+                objeto: "Vigilância Armada",
+                vigenciaFinal: "2026-09-18",
+                pregaoVinculado: "65/2026 (ANULADO)",
+                valorAnual: 333421.92,
+                situacao: "ANULADO. Risco gravíssimo de interrupção na segurança armada."
+            },
+            {
+                contrato: "23/2025",
+                unidade: "AGU/AL",
+                objeto: "Manutenção Predial",
+                vigenciaFinal: "2026-10-06",
+                pregaoVinculado: "xx/2026 (AL/PB)",
+                valorAnual: 574026.62,
+                situacao: "Parecer CJU recebido com ressalvas. Requer publicação de edital urgente."
+            },
+            {
+                contrato: "21/2023",
+                unidade: "AGU/MA",
+                objeto: "Apoio Administrativo",
+                vigenciaFinal: "2026-10-16",
+                pregaoVinculado: "68/2026",
+                valorAnual: 7331669.40,
+                situacao: "Pregão em Mar Aberto. Aguarda autorização orçamentária da SGA."
+            },
+            {
+                contrato: "33/2025",
+                unidade: "AGU/PB",
+                objeto: "Manutenção Predial",
+                vigenciaFinal: "2026-10-29",
+                pregaoVinculado: "xx/2026 (AL/PB)",
+                valorAnual: 574026.62,
+                situacao: "Novo pregão unificado em elaboração pós parecer CJU."
+            },
+            {
+                contrato: "15/2025 (não prorrogado)",
+                unidade: "AGU/PB",
+                objeto: "Ar Condicionado",
+                vigenciaFinal: "2026-11-04",
+                pregaoVinculado: "58/2026",
+                valorAnual: 250000.00,
+                situacao: "Fase de recurso do pregão com decisão prevista para 21/10."
+            },
+            {
+                contrato: "25/2026",
+                unidade: "AGU/PB",
+                objeto: "Vigilância Armada",
+                vigenciaFinal: "2026-12-18",
+                pregaoVinculado: "71/2026",
+                valorAnual: 347800.32,
+                situacao: "Sessão pública marcada para 14/10/2026 às 10:00h."
+            },
+            {
+                contrato: "0001/2022 (JAVE YIRE)",
+                unidade: "AGU/PI",
+                objeto: "Limpeza",
+                vigenciaFinal: "2026-12-30",
+                pregaoVinculado: "xx/2026 (PI)",
+                valorAnual: 2389507.20,
+                situacao: "Processo licitatório enviado para parecer consultivo da CJU."
+            }
+        ];
+
+        // Instâncias de Gráficos do Chart.js
+        let chartEstimadoHomologado = null;
+        let chartObjetoDistribuicao = null;
+        let chartEconomiaUnidade = null;
+        let chartDuracaoHistograma = null;
+        let chartVigenciaBarras = null;
+        let chartVigenciaGantt = null;
+
+
+        // Função de Formatação de Moeda
+        function formatMoney(val) {
+            if (val === null || val === undefined || isNaN(val)) return "–";
+            return val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+        }
+
+        // Função de Cálculo de Dias Entre Datas
+        function calcDaysBetween(dateStartStr, dateEndStr) {
+            if (!dateStartStr || !dateEndStr || dateStartStr === "-" || dateEndStr === "-") return null;
+            const d1 = new Date(dateStartStr);
+            const d2 = new Date(dateEndStr);
+            const diffTime = d2 - d1;
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
+
+        // Função de Cálculo de Dias Restantes a Partir da Data de Referência
+        function calcDaysRemaining(dateStr) {
+            if (!dateStr || dateStr === "-") return null;
+            const exp = new Date(dateStr);
+            const diff = exp - REF_DATE;
+            return Math.ceil(diff / (1000 * 60 * 60 * 24));
+        }
+
+        // Formatação Amigável de Data
+        function formatDateBR(dateStr) {
+            if (!dateStr || dateStr === "-" || dateStr === "A definir") return dateStr || "–";
+            const parts = dateStr.split("-");
+            if (parts.length === 3) {
+                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+            return dateStr;
+        }
+
+        window.onload = function() {
+            initDashboard();
+        };
+
+        function initDashboard() {
+            renderKPIs();
+            renderEncerradosTable();
+            renderAgendaCards();
+            renderVigenciaTable();
+            renderAllCharts();
+            renderVigenciaInsightText();
+        }
+
+        function renderKPIs() {
+            // Unidades / Filtros selecionados
+            const filteredEncerrados = getFilteredEncerrados();
+            const filteredAgendaExterna = getFilteredAgendaExterna();
+            const filteredAgendaInterna = getFilteredAgendaInterna();
+
+            // Total Encerradas
+            document.getElementById("kpi-total-encerradas").innerText = filteredEncerrados.length;
+
+            // Total Em Andamento
+            const totalAndamento = filteredAgendaInterna.length + filteredAgendaExterna.length;
+            document.getElementById("kpi-total-andamento").innerText = totalAndamento;
+
+            // Valor Estimado Total (Encerrados + Agenda)
+            const sumEstEncerrados = filteredEncerrados.reduce((acc, item) => acc + (item.estimado || 0), 0);
+            const sumEstInterna = filteredAgendaInterna.reduce((acc, item) => acc + (item.estimado || 0), 0);
+            const sumEstExterna = filteredAgendaExterna.reduce((acc, item) => acc + (item.estimado || 0), 0);
+            const totalEstimado = sumEstEncerrados + sumEstInterna + sumEstExterna;
+            document.getElementById("kpi-valor-estimado").innerText = formatMoney(totalEstimado);
+
+            // Valor Homologado Total (Encerrados Válidos)
+            const sumHomologado = filteredEncerrados.reduce((acc, item) => acc + (item.homologado || 0), 0);
+            document.getElementById("kpi-valor-homologado").innerText = formatMoney(sumHomologado);
+
+            // Economia Total & %
+            let somaEstimadoComHomologacao = 0;
+            let somaHomologadoValido = 0;
+            filteredEncerrados.forEach(item => {
+                if (item.status === "Homologado" && item.homologado !== null) {
+                    somaEstimadoComHomologacao += item.estimado;
+                    somaHomologadoValido += item.homologado;
+                }
+            });
+            const economiaAbsoluta = somaEstimadoComHomologacao - somaHomologadoValido;
+            const economiaPct = somaEstimadoComHomologacao > 0 ? (economiaAbsoluta / somaEstimadoComHomologacao) * 100 : 0;
+            
+            document.getElementById("kpi-economia-total").innerText = formatMoney(economiaAbsoluta);
+            document.getElementById("kpi-economia-pct").innerText = `(${economiaPct.toFixed(2)}%)`;
+
+            // Tempo Médio de Tramitação (Entrada -> Homologação)
+            let totalDias = 0;
+            let countValidos = 0;
+            filteredEncerrados.forEach(item => {
+                const dias = calcDaysBetween(item.dataEntrada, item.dataHomologacao);
+                if (dias !== null) {
+                    totalDias += dias;
+                    countValidos++;
+                }
+            });
+            const tempoMedio = countValidos > 0 ? Math.round(totalDias / countValidos) : 0;
+            document.getElementById("kpi-tempo-medio").innerText = `${tempoMedio} dias`;
+
+            // Contratos com Vigência Crítica <= 30 dias
+            const contratosCriticos = DATA_VIGENCIA.filter(c => {
+                const r = calcDaysRemaining(c.vigenciaFinal);
+                return r !== null && r <= 30;
+            }).length;
+            document.getElementById("kpi-vigencia-critica").innerText = contratosCriticos;
+
+            // Anulados / Fracassados
+            const anulados = filteredEncerrados.filter(i => i.status === "Fracassado" || i.status === "Anulado").length;
+            document.getElementById("kpi-anulados").innerText = anulados;
+        }
+
+        function getFilteredEncerrados() {
+            const search = document.getElementById("global-search").value.toLowerCase();
+            const un = document.getElementById("filter-unidade").value;
+            const obj = document.getElementById("filter-objeto").value;
+            const preg = document.getElementById("filter-pregoeiro").value;
+
+            return DATA_ENCERRADOS.filter(item => {
+                const matchesSearch = !search || 
+                    item.pregao.toLowerCase().includes(search) ||
+                    item.objeto.toLowerCase().includes(search) ||
+                    item.empresa.toLowerCase().includes(search) ||
+                    item.unidade.toLowerCase().includes(search) ||
+                    item.processo.toLowerCase().includes(search);
+                
+                const matchesUnidade = !un || item.unidade.includes(un);
+                const matchesObjeto = !obj || item.objeto === obj;
+                const matchesPregoeiro = !preg || item.pregoeiro === preg;
+
+                return matchesSearch && matchesUnidade && matchesObjeto && matchesPregoeiro;
+            });
+        }
+
+        function getFilteredAgendaInterna() {
+            const search = document.getElementById("global-search").value.toLowerCase();
+            const un = document.getElementById("filter-unidade").value;
+            const obj = document.getElementById("filter-objeto").value;
+            const preg = document.getElementById("filter-pregoeiro").value;
+
+            return DATA_AGENDA.faseInterna.filter(item => {
+                const matchesSearch = !search || 
+                    item.pregao.toLowerCase().includes(search) ||
+                    item.descricaoObjeto.toLowerCase().includes(search) ||
+                    item.unidade.toLowerCase().includes(search) ||
+                    item.processo.toLowerCase().includes(search);
+                
+                const matchesUnidade = !un || item.unidade.includes(un);
+                const matchesObjeto = !obj || item.objeto === obj;
+                const matchesPregoeiro = !preg || item.pregoeiro === preg;
+
+                return matchesSearch && matchesUnidade && matchesObjeto && matchesPregoeiro;
+            });
+        }
+
+        function getFilteredAgendaExterna() {
+            const search = document.getElementById("global-search").value.toLowerCase();
+            const un = document.getElementById("filter-unidade").value;
+            const obj = document.getElementById("filter-objeto").value;
+            const preg = document.getElementById("filter-pregoeiro").value;
+
+            return DATA_AGENDA.faseExterna.filter(item => {
+                const matchesSearch = !search || 
+                    item.pregao.toLowerCase().includes(search) ||
+                    item.descricaoObjeto.toLowerCase().includes(search) ||
+                    item.unidade.toLowerCase().includes(search) ||
+                    item.processo.toLowerCase().includes(search);
+                
+                const matchesUnidade = !un || item.unidade.includes(un);
+                const matchesObjeto = !obj || item.objeto === obj;
+                const matchesPregoeiro = !preg || item.pregoeiro === preg;
+
+                return matchesSearch && matchesUnidade && matchesObjeto && matchesPregoeiro;
+            });
+        }
+
+        function renderEncerradosTable() {
+            const list = getFilteredEncerrados();
+            const tbody = document.getElementById("tbody-encerrados");
+            tbody.innerHTML = "";
+
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" class="p-6 text-center text-slate-500">Nenhum registro encontrado com os filtros selecionados.</td></tr>`;
+                return;
+            }
+
+            list.forEach(item => {
+                const duracao = calcDaysBetween(item.dataEntrada, item.dataHomologacao);
+                const economiaVal = (item.estimado && item.homologado) ? (item.estimado - item.homologado) : 0;
+                const economiaPct = (item.estimado && item.homologado) ? ((economiaVal / item.estimado) * 100).toFixed(1) + "%" : "–";
+
+                let statusBadge = "";
+                if (item.status === "Homologado") {
+                    statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">Homologado</span>`;
+                } else if (item.status === "Fracassado") {
+                    statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300">Fracassado</span>`;
+                } else {
+                    statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-900 text-white border border-rose-950">Anulado</span>`;
+                }
+
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/40 transition border-b border-slate-100 dark:border-slate-700/50";
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-agu-navy dark:text-slate-200">${item.pregao}</td>
+                    <td class="p-3 font-medium">${item.objeto}</td>
+                    <td class="p-3 font-semibold text-slate-600 dark:text-slate-300">${item.unidade}</td>
+                    <td class="p-3 text-slate-600 dark:text-slate-400">${item.empresa}</td>
+                    <td class="p-3 text-right font-mono">${formatMoney(item.estimado)}</td>
+                    <td class="p-3 text-right font-mono text-emerald-700 dark:text-emerald-400 font-bold">${formatMoney(item.homologado)}</td>
+                    <td class="p-3 text-right font-mono text-slate-600 dark:text-slate-300">
+                        ${economiaVal > 0 ? `<span class="text-emerald-600 font-bold">${formatMoney(economiaVal)}</span> <br><span class="text-[10px] text-slate-400">(${economiaPct})</span>` : '–'}
+                    </td>
+                    <td class="p-3 text-center font-bold text-slate-700 dark:text-slate-300">${duracao ? duracao + ' dias' : '–'}</td>
+                    <td class="p-3 text-slate-600 dark:text-slate-400">${item.pregoeiro}</td>
+                    <td class="p-3 text-center">${statusBadge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderAgendaCards() {
+            // Fase Interna Cards
+            const listInterna = getFilteredAgendaInterna();
+            const containerInterna = document.getElementById("subview-interna");
+            containerInterna.innerHTML = "";
+
+            document.getElementById("badge-count-interna").innerText = listInterna.length;
+
+            if (listInterna.length === 0) {
+                containerInterna.innerHTML = `<p class="col-span-full p-6 text-center text-xs text-slate-500">Nenhum processo em Fase Interna encontrado com os filtros aplicados.</p>`;
+            } else {
+                listInterna.forEach(item => {
+                    const card = document.createElement("div");
+                    card.className = "bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3";
+                    card.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-agu-navy dark:text-agu-gold">${item.pregao}</span>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${item.statusBadge}">${item.status}</span>
+                        </div>
+                        <h4 class="font-bold text-sm text-slate-800 dark:text-slate-100">${item.descricaoObjeto}</h4>
+                        <div class="text-xs space-y-1 text-slate-600 dark:text-slate-300">
+                            <p><strong>Unidade:</strong> ${item.unidade}</p>
+                            <p><strong>Modalidade:</strong> ${item.modalidade}</p>
+                            <p><strong>Pregoeiro(a):</strong> ${item.pregoeiro}</p>
+                            <p><strong>Valor Estimado:</strong> <span class="font-mono font-bold text-slate-800 dark:text-slate-100">${formatMoney(item.estimado)}</span></p>
+                            <p><strong>Envio CJU:</strong> ${formatDateBR(item.cjuData)}</p>
+                            <p><strong>NUP:</strong> ${item.processo}</p>
+                        </div>
+                        <div class="pt-2 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center text-[10px] text-slate-400">
+                            <span>SAPIENS: ${formatDateBR(item.sapiensData)}</span>
+                            <span>Atualizado: ${formatDateBR(item.ultimaAtualizacao)}</span>
+                        </div>
+                    `;
+                    containerInterna.appendChild(card);
+                });
+            }
+
+            // Fase Externa Cards
+            const listExterna = getFilteredAgendaExterna();
+            const containerExterna = document.getElementById("subview-externa");
+            containerExterna.innerHTML = "";
+
+            document.getElementById("badge-count-externa").innerText = listExterna.length;
+
+            if (listExterna.length === 0) {
+                containerExterna.innerHTML = `<p class="col-span-full p-6 text-center text-xs text-slate-500">Nenhum processo em Fase Externa encontrado com os filtros aplicados.</p>`;
+            } else {
+                listExterna.forEach(item => {
+                    const card = document.createElement("div");
+                    card.className = "bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3";
+                    card.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-agu-navy dark:text-agu-gold">Pregão ${item.pregao}</span>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${item.statusBadge}">${item.status}</span>
+                        </div>
+                        <h4 class="font-bold text-sm text-slate-800 dark:text-slate-100">${item.descricaoObjeto}</h4>
+                        <div class="text-xs space-y-1.5 text-slate-600 dark:text-slate-300">
+                            <p><strong>Unidade:</strong> ${item.unidade}</p>
+                            <p><strong>Valor Estimado:</strong> <span class="font-mono font-bold text-slate-800 dark:text-slate-100">${formatMoney(item.estimado)}</span></p>
+                            <p><strong>Abertura Sessão:</strong> <span class="text-agu-blue font-bold">${formatDateBR(item.abertura)}</span></p>
+                            <p><strong>Vigência Atual:</strong> <span class="text-rose-600 dark:text-rose-400 font-semibold">${item.vigenciaAtual}</span></p>
+                            <p><strong>Pregoeiro(a):</strong> ${item.pregoeiro}</p>
+                            <p><strong>NUP:</strong> ${item.processo}</p>
+                        </div>
+                        <div class="pt-2 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center text-[10px] text-slate-400">
+                            <span>Envio CJU: ${formatDateBR(item.cjuData)}</span>
+                            <span>Atualiz.: ${formatDateBR(item.ultimaAtualizacao)}</span>
+                        </div>
+                    `;
+                    containerExterna.appendChild(card);
+                });
+            }
+        }
+
+        function renderVigenciaTable() {
+            const tbody = document.getElementById("tbody-vigencia");
+            tbody.innerHTML = "";
+
+            // Ordena do mais crítico para o menos crítico
+            const sortedList = [...DATA_VIGENCIA].sort((a, b) => {
+                const ra = calcDaysRemaining(a.vigenciaFinal);
+                const rb = calcDaysRemaining(b.vigenciaFinal);
+                return (ra || 999) - (rb || 999);
+            });
+
+            sortedList.forEach(item => {
+                const diasRestantes = calcDaysRemaining(item.vigenciaFinal);
+                let badgeClass = "";
+                let statusText = "";
+
+                if (diasRestantes <= 30) {
+                    badgeClass = "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-300";
+                    statusText = "🔴 Crítico (&le; 30d)";
+                } else if (diasRestantes <= 60) {
+                    badgeClass = "bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-950 dark:text-orange-300";
+                    statusText = "🟠 Laranja (31-60d)";
+                } else if (diasRestantes <= 90) {
+                    badgeClass = "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300";
+                    statusText = "🟡 Atenção (61-90d)";
+                } else {
+                    badgeClass = "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300";
+                    statusText = "🟢 Normal (> 90d)";
+                }
+
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/40 transition border-b border-slate-100 dark:border-slate-700/50";
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-slate-800 dark:text-slate-100">${item.contrato}</td>
+                    <td class="p-3 font-semibold text-slate-600 dark:text-slate-300">${item.unidade}</td>
+                    <td class="p-3">${item.objeto}</td>
+                    <td class="p-3 text-center font-bold text-rose-600 dark:text-rose-400 font-mono">${formatDateBR(item.vigenciaFinal)}</td>
+                    <td class="p-3 text-center font-black text-sm">${diasRestantes} dias</td>
+                    <td class="p-3 text-center">
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold border ${badgeClass}">
+                            ${statusText}
+                        </span>
+                    </td>
+                    <td class="p-3 font-bold text-agu-navy dark:text-agu-gold">${item.pregaoVinculado}</td>
+                    <td class="p-3 text-slate-600 dark:text-slate-300 text-[11px] leading-tight">${item.situacao}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderVigenciaInsightText() {
+            const listCriticos = DATA_VIGENCIA.filter(c => calcDaysRemaining(c.vigenciaFinal) <= 30);
+            const count = listCriticos.length;
+
+            const div = document.getElementById("insight-vigencia-texto");
+            div.innerHTML = `
+                <h4 class="font-bold text-sm text-amber-900 dark:text-amber-100">DIAGNÓSTICO DE RISCO DE CONTRATOS & RECOMENDAÇÕES AUTOMÁTICAS:</h4>
+                <p>
+                    <strong>${count} contratos</strong> expiram nos próximos 30 dias a contar da data de referência (02/10/2026). Recomenda-se priorizar com urgência máxima a conclusão dos certames licitatórios 
+                    <strong class="underline">Pregão 58/2026 (Ar Cond. PB - vencimento em 04/11)</strong>, 
+                    <strong class="underline">Pregão 68/2026 (Apoio MA - vencimento em 16/10)</strong> e 
+                    <strong class="underline">Pregão xx/2026 AL/PB (Manutenção AL/PB - vencimentos em 06/10 e 29/10)</strong> para evitar a descontinuidade dos serviços fundamentais nas unidades operacionais da AGU.
+                </p>
+            `;
+
+            document.getElementById("alert-summary-text").innerText = `${count} contratos expiram em até 30 dias!`;
+        }
+
+        function renderAllCharts() {
+            renderChartEstimadoHomologado();
+            renderChartObjetoDistribuicao();
+            renderChartEconomiaUnidade();
+            renderChartDuracaoHistograma();
+            renderChartVigenciaBarras();
+            renderChartVigenciaGantt();
+        }
+
+        // Chart 1: Estimado vs Homologado
+        function renderChartEstimadoHomologado() {
+            const ctx = document.getElementById("chart-estimado-homologado").getContext("2d");
+            if (chartEstimadoHomologado) chartEstimadoHomologado.destroy();
+
+            const labels = DATA_ENCERRADOS.map(i => i.pregao);
+            const dataEst = DATA_ENCERRADOS.map(i => i.estimado);
+            const dataHom = DATA_ENCERRADOS.map(i => i.homologado || 0);
+
+            chartEstimadoHomologado = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Estimado (R$)',
+                            data: dataEst,
+                            backgroundColor: 'rgba(26, 58, 92, 0.7)',
+                            borderColor: '#1a3a5c',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Homologado (R$)',
+                            data: dataHom,
+                            backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                            borderColor: '#10b981',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { boxWidth: 12, font: { size: 10 } } },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => `${ctx.dataset.label}: ${formatMoney(ctx.raw)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { ticks: { font: { size: 9 }, callback: val => 'R$ ' + (val/1000).toFixed(0) + 'k' } },
+                        x: { ticks: { font: { size: 9 }, maxRotation: 45 } }
+                    }
+                }
+            });
+        }
+
+        // Chart 2: Distribuição por Objeto
+        function renderChartObjetoDistribuicao() {
+            const ctx = document.getElementById("chart-objeto-distribuicao").getContext("2d");
+            if (chartObjetoDistribuicao) chartObjetoDistribuicao.destroy();
+
+            const objetoMap = {};
+            DATA_ENCERRADOS.forEach(i => {
+                const val = i.homologado || i.estimado || 0;
+                objetoMap[i.objeto] = (objetoMap[i.objeto] || 0) + val;
+            });
+
+            chartObjetoDistribuicao = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(objetoMap),
+                    datasets: [{
+                        data: Object.values(objetoMap),
+                        backgroundColor: [
+                            '#1a3a5c', '#0d5c91', '#c9a227', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => `${ctx.label}: ${formatMoney(ctx.raw)}`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Chart 3: Economia por Unidade
+        function renderChartEconomiaUnidade() {
+            const ctx = document.getElementById("chart-economia-unidade").getContext("2d");
+            if (chartEconomiaUnidade) chartEconomiaUnidade.destroy();
+
+            const economiaMap = {};
+            DATA_ENCERRADOS.forEach(i => {
+                if (i.status === "Homologado" && i.homologado) {
+                    const econ = i.estimado - i.homologado;
+                    economiaMap[i.unidade] = (economiaMap[i.unidade] || 0) + econ;
+                }
+            });
+
+            chartEconomiaUnidade = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(economiaMap),
+                    datasets: [{
+                        label: 'Economia Gerada (R$)',
+                        data: Object.values(economiaMap),
+                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                        borderColor: '#10b981',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => `Economia: ${formatMoney(ctx.raw)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { font: { size: 9 }, callback: val => 'R$ ' + (val/1000).toFixed(0) + 'k' } },
+                        y: { ticks: { font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        // Chart 4: Histograma de Duração
+        function renderChartDuracaoHistograma() {
+            const ctx = document.getElementById("chart-duracao-histograma").getContext("2d");
+            if (chartDuracaoHistograma) chartDuracaoHistograma.destroy();
+
+            const labels = DATA_ENCERRADOS.map(i => i.pregao);
+            const duracoes = DATA_ENCERRADOS.map(i => calcDaysBetween(i.dataEntrada, i.dataHomologacao) || 0);
+
+            chartDuracaoHistograma = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Dias Corridos (Entrada → Homologação)',
+                        data: duracoes,
+                        backgroundColor: duracoes.map(d => d > 130 ? 'rgba(225, 29, 72, 0.8)' : 'rgba(201, 162, 39, 0.8)'),
+                        borderColor: duracoes.map(d => d > 130 ? '#e11d48' : '#c9a227'),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => `Duração: ${ctx.raw} dias corridos`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { title: { display: true, text: 'Dias Corridos', font: { size: 10 } }, ticks: { font: { size: 9 } } },
+                        x: { ticks: { font: { size: 9 }, maxRotation: 45 } }
+                    }
+                }
+            });
+        }
+
+        // Chart 5: Vigência Barras Horizontais
+        function renderChartVigenciaBarras() {
+            const ctx = document.getElementById("chart-vigencia-barras").getContext("2d");
+            if (chartVigenciaBarras) chartVigenciaBarras.destroy();
+
+            const sorted = [...DATA_VIGENCIA].sort((a,b) => calcDaysRemaining(a.vigenciaFinal) - calcDaysRemaining(b.vigenciaFinal));
+            const labels = sorted.map(i => i.contrato);
+            const dias = sorted.map(i => calcDaysRemaining(i.vigenciaFinal));
+            const colors = dias.map(d => d <= 30 ? '#e11d48' : (d <= 60 ? '#f97316' : (d <= 90 ? '#eab308' : '#10b981')));
+
+            chartVigenciaBarras = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Dias Restantes',
+                        data: dias,
+                        backgroundColor: colors,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => `${ctx.raw} dias restantes`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { title: { display: true, text: 'Dias até Vencimento', font: { size: 10 } }, ticks: { font: { size: 9 } } },
+                        y: { ticks: { font: { size: 9 } } }
+                    }
+                }
+            });
+        }
+
+        // Chart 6: Linha do Tempo / Gantt Simplificado
+        function renderChartVigenciaGantt() {
+            const ctx = document.getElementById("chart-vigencia-gantt").getContext("2d");
+            if (chartVigenciaGantt) chartVigenciaGantt.destroy();
+
+            const sorted = [...DATA_VIGENCIA].sort((a,b) => new Date(a.vigenciaFinal) - new Date(b.vigenciaFinal));
+            const labels = sorted.map(i => i.contrato);
+            const endDays = sorted.map(i => calcDaysRemaining(i.vigenciaFinal));
+
+            chartVigenciaGantt = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Dias Restantes (Linha de Vencimento)',
+                        data: endDays,
+                        borderColor: '#1a3a5c',
+                        backgroundColor: 'rgba(26, 58, 92, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: endDays.map(d => d <= 30 ? '#e11d48' : '#c9a227'),
+                        pointRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { title: { display: true, text: 'Dias de Margem de Manobra', font: { size: 10 } } },
+                        x: { ticks: { font: { size: 8 } } }
+                    }
+                }
+            });
+        }
+
+
+        // Alternância de Abas Principais
+        function switchTab(tabKey) {
+            const tabs = ['encerrados', 'agenda', 'vigencia', 'insights'];
+            tabs.forEach(t => {
+                document.getElementById(`view-${t}`).classList.add('hidden');
+                document.getElementById(`tab-btn-${t}`).classList.remove('active');
+            });
+
+            document.getElementById(`view-${tabKey}`).classList.remove('hidden');
+            document.getElementById(`tab-btn-${tabKey}`).classList.add('active');
+        }
+
+        // Alternância de Sub-Abas AGENDA
+        function switchSubTab(subKey) {
+            const subtabs = ['interna', 'externa', 'dls'];
+            subtabs.forEach(s => {
+                document.getElementById(`subview-${s}`).classList.add('hidden');
+                const btn = document.getElementById(`subtab-btn-${s}`);
+                btn.classList.remove('active', 'bg-agu-navy', 'text-white');
+                btn.classList.add('bg-slate-200', 'dark:bg-slate-700', 'text-slate-700', 'dark:text-slate-200');
+            });
+
+            document.getElementById(`subview-${subKey}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`subtab-btn-${subKey}`);
+            activeBtn.classList.add('active', 'bg-agu-navy', 'text-white');
+            activeBtn.classList.remove('bg-slate-200', 'dark:bg-slate-700', 'text-slate-700', 'dark:text-slate-200');
+        }
+
+        // Aplicação de Filtros Globais
+        function applyFilters() {
+            renderKPIs();
+            renderEncerradosTable();
+            renderAgendaCards();
+            renderAllCharts();
+        }
+
+        // Reset de Filtros
+        function resetFilters() {
+            document.getElementById("global-search").value = "";
+            document.getElementById("filter-unidade").value = "";
+            document.getElementById("filter-objeto").value = "";
+            document.getElementById("filter-pregoeiro").value = "";
+            applyFilters();
+        }
+
+        // Alternância de Tema Claro / Escuro
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            if (html.classList.contains("dark")) {
+                html.classList.remove("dark");
+                html.classList.add("light");
+            } else {
+                html.classList.remove("light");
+                html.classList.add("dark");
+            }
+        }
+
+        // Função de Ordenação de Tabela
+        function sortTable(tableId, colIndex, isNumeric = false) {
+            const table = document.getElementById(tableId);
+            const tbody = table.querySelector("tbody");
+            const rows = Array.from(tbody.querySelectorAll("tr"));
+
+            let dir = table.getAttribute("data-sort-dir") === "asc" ? "desc" : "asc";
+            table.setAttribute("data-sort-dir", dir);
+
+            rows.sort((a, b) => {
+                let cellA = a.children[colIndex].innerText.trim();
+                let cellB = b.children[colIndex].innerText.trim();
+
+                if (isNumeric) {
+                    let numA = parseFloat(cellA.replace(/[^\d,-]/g, '').replace(',', '.')) || 0;
+                    let numB = parseFloat(cellB.replace(/[^\d,-]/g, '').replace(',', '.')) || 0;
+                    return dir === "asc" ? numA - numB : numB - numA;
+                } else {
+                    return dir === "asc" ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
+                }
+            });
+
+            rows.forEach(r => tbody.appendChild(r));
+        }
+
+        // Exportação de Tabela para CSV
+        function exportTableToCSV(tableId, filename) {
+            const table = document.getElementById(tableId);
+            let csv = [];
+            const rows = table.querySelectorAll("tr");
+
+            for (let i = 0; i < rows.length; i++) {
+                const row = [], cols = rows[i].querySelectorAll("td, th");
+                for (let j = 0; j < cols.length; j++) {
+                    let text = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, " ").replace(/"/g, '""');
+                    row.push('"' + text + '"');
+                }
+                csv.push(row.join(";"));
+            }
+
+            const csvFile = new Blob(["\ufeff" + csv.join("\n")], { type: "text/csv;charset=utf-8;" });
+            const downloadLink = document.createElement("a");
+            downloadLink.download = filename;
+            downloadLink.href = window.URL.createObjectURL(csvFile);
+            downloadLink.style.display = "none";
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+    </script>
+</body>
+</html>
